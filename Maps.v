@@ -14,6 +14,13 @@ Theorem eq_id_dec :
   unfold not; intros h; right; intros. injection H; auto.
 Qed.
 
+Theorem eq_id_dec_id:
+  forall (A:Set) (t f:A) x,
+   (if (eq_id_dec x x) then t else f) = t.
+
+  intros; case (eq_id_dec x x); auto.
+  intros. elim (n eq_refl).
+Qed.   
 Definition beq_id id1 id2 :=
   match (eq_id_dec id1 id2) with
     | left _ => true
@@ -68,11 +75,6 @@ Definition t_update {A:Type} (m: total_map A) (x:id) (v:A) : total_map A :=
   Qed.
 
   
-Theorem eq_id_dec_id :
-  forall id, eq_id_dec id id = left _ (eq_refl id).
-  intros.
-  case (eq_id_dec id0 id0); [auto| intros h; (elim (h (eq_refl _)))].
-Abort.
 
 Lemma t_update_neq:
   forall (X:Type) v x1 x2 (m:total_map X),

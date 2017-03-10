@@ -442,6 +442,121 @@ Fixpoint s_compile (e:aexp) : list sinstr :=
     | AMult a b => (s_compile a) ++ (s_compile b) ++ SMult :: nil
   end.
 
-Theorem s_compile_correct :
-  forall st e,
-    s_execute st
+Lemma s_execute_append :
+  forall a b c st,
+    s_execute st (c) (a ++ b) = s_execute st (s_execute st (c) a) b. 
+  intro. elim a; auto.
+  intros. elim a0; intros; auto. simpl. apply H.
+  simpl. apply H.
+  case c. simpl. apply H.
+  intros. case l0. simpl. apply H.
+  simpl. intros; apply H.
+  case c. simpl. apply H.
+  intros. case l0. simpl. apply H.
+  simpl. intros; apply H.
+  case c. simpl. apply H.
+  intros. case l0. simpl. apply H.
+  simpl.  intros; apply H.
+Qed.
+
+  Theorem s_compile_correct :
+    forall st e c,
+      s_execute st c (s_compile e) =  [aeval st e] ++ c.
+    intros st e. elim e; intros; auto.
+    simpl. rewrite s_execute_append. rewrite H. rewrite s_execute_append. rewrite H0. simpl. rewrite plus_comm. trivial.
+    simpl. rewrite s_execute_append. rewrite H. rewrite s_execute_append. rewrite H0. simpl. trivial.
+    simpl. rewrite s_execute_append. rewrite H. rewrite s_execute_append. rewrite H0. simpl. rewrite mult_comm. trivial.
+  Qed.
+
+
+  Module BREAKIMP.
+    Inductive com : Type :=
+  | CSkip : com
+  | CBreak : com
+  | CAss : id -> aexp -> com
+  | CSeq : com -> com -> com
+  | CIf : bexp -> com -> com -> com
+  | CWhile : bexp -> com -> com.
+
+    Notation "'SKIP'" :=
+      CSkip.
+
+    Notation "'BREAK'" :=
+      CBreak.
+
+    Notation "x '::=' a" :=
+      (CAss x a) (at level 60).
+
+    Notation "c1 ;; c2" :=
+      (CSeq c1 c2) (at level 80, right associativity).
+
+    Notation "'WHILE' b 'DO' c 'END'" :=
+      (CWhile b c) (at level 80, right associativity).
+
+    Notation "'IFB' b 'THEN' c1 'ELSE' c2 'FI' " :=
+      (CIf b c1 c2) (at level 80, right associativity).
+
+    Inductive status : Type :=
+    | SContinue : status
+    | SBreak : status.
+
+    Reserved Notation "c1 '/' st '\\' s '/' st'"
+             (at level 40, st, s at level 39).
+
+    Inductive ceval : com -> state -> status -> state -> Prop :=
+    | E_Skip : forall st,
+                 SKIP / st \\ SContinue / st
+    | E_Ass : forall st a b,
+                (a ::= b) / st \\ SContinue / (t_update st a (aeval st b))
+    | E_Break : forall st,
+                  BREAK / st \\ SBreak / st
+    | E_IfTrue : forall st st' c1 c2 signal,
+                   c1 / st \\ signal / st' ->
+                   (IFB BTrue THEN c1 ELSE c2 FI) / st \\ signal / st'
+    | E_IfFalse : forall st st' c1 c2 signal,
+                    c2 / st \\ signal / st' ->
+                    (IFB BFalse THEN c1 ELSE c2 FI) / st \\ signal / st'
+    | E_SeqBreak : forall st st' c1 c2,
+                     c1 / st \\ SBreak / st' ->
+                     (c1 ;; c2) / st \\ SBreak / st'
+    | E_SeqCont : forall st st' st'' c1 c2 signal,
+                    c1 / st \\ SContinue / st' ->
+                    c2 / st' \\ signal / st'' ->
+                    (c1 ;; c2) / st \\ signal / st''
+    | E_WhileFalse : forall st b c,
+                       beval st b = false ->
+                       WHILE b DO c END / st \\ SContinue / st
+    | E_WhileBreak : forall st st' b c,
+                       c / st \\ SBreak / st' ->
+                       beval st b = true ->
+                       (WHILE b DO c END) / st \\ SContinue / st'
+    | E_WhileTrue : forall st st' st'' b c,
+                      beval st b = true ->
+                      c / st \\ SContinue / st' ->
+                      (WHILE b DO c END) / st' \\ SContinue / st'' ->
+                      (WHILE b DO c END) / st \\ SContinue / st''
+    where "c1 '/' st '\\' signal '/' st'" := (ceval c1 st signal st').
+
+    Theorem break_ignore : forall c st st' s,
+                             (BREAK;;c) / st \\ s / st' ->
+                             st = st'.
+      intros. inversion H.  inversion H5. trivial. inversion H2.
+    Qed.
+
+    Theorem while_continue : forall b c st st' s,
+                               (WHILE b DO c END) / st \\ s / st' ->
+                               s = SContinue.
+      intros.
+      inversion H; auto.
+    Qed.
+
+    Theorem while_stops_on_break :
+      forall b c st st',
+        beval st b = true ->
+        c / st \\ SBreak / st' ->
+        (WHILE b DO c END) / st \\ SContinue / st'.
+
+      intros. apply E_WhileBreak; auto.
+    Qed.
+
+    

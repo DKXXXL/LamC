@@ -558,5 +558,6 @@ Qed.
 
       intros. apply E_WhileBreak; auto.
     Qed.
-
+  End BREAKIMP.
+  
     

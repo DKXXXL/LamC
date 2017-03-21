@@ -55,7 +55,7 @@ Fixpoint string_of_list (xs:list ascii) : string :=
 
 Definition token := string.
 
-Fixpoint tokenise_helper (cls:chartype) (acc xs : list ascii)
+Fixpoint tokenize_helper (cls:chartype) (acc xs : list ascii)
 : list (list ascii) :=
   let tk:= match acc with [] => [] | _ :: _ => [rev acc] end in
   match xs with
@@ -67,4 +67,7 @@ Fixpoint tokenise_helper (cls:chartype) (acc xs : list ascii)
         | _, _, ")" =>
           tk ++ [")"] :: (tokenize_helper other [] xs')
         | _, white, _ =>
-          tk ++ 
+          tk ++ (tokenize_helper white [] xs')
+        | alpha, alpha, x =>
+          tokenize_helper alpha (x :: acc) xs'
+        | digit, digit, 

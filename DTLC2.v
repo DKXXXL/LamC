@@ -131,7 +131,16 @@ Qed.
 
 
 
-Inductive _EExp : Set :=
-| e_ext : forall cont: _Exp, {i : id & { exp | cont = _Lamb i exp}} -> nat -> _EExp.
+Definition _Mark := nat.
+Definition _emptymark : _Mark := 0.
+
+Definition _Env := total_map _Mark.
+
+Print t_empty.
+
+Inductive _EExp : _Env -> _Exp -> Type :=
+| e_ret: forall exp : _Exp, _EExp (t_empty _emptymark) exp
+| e_ext: forall (exp exp' : _Exp) (i:id) (env : _Env) (_mark : _Mark),
+            _EExp env exp -> exp = _Lamb i exp' -> _EExp (t_update env i _mark) exp'.
 
 (* With side effect. *)

@@ -11,16 +11,16 @@ Inductive _obj : Set :=
 | _list : list _obj -> _obj
 | _quote : string -> _obj
 | _quoteq : _obj -> _obj
-| _undef : _obj.
+| _undef : _obj -> _obj.
 
 
 Inductive _Exp : Set :=
 | _Const : _obj -> _Exp
 | _Var : id -> _Exp
 | _Lamb : id  -> _Exp -> _Exp
-| _ITNOp : _Exp -> _Exp -> _Exp
 | _Apply : _Exp -> _Exp -> _Exp.
 
+(* EXTOp is prepared for extension. Like side effects(IO), and many other stuff *)
 
 
 
@@ -80,8 +80,6 @@ Definition substt (var :_Exp) : _Exp -> _Exp -> {s| var = _Var s} -> _Exp.
                                              | right h2 => _Lamb i (substt bdd exp' h)
                                            end
                               end
-                                                               
-            | _ITNOp exp1 exp2 => _ITNOp (substt bdd exp1 h) (substt bdd exp2 h)
             | _Apply func arg => _Apply (substt bdd func h) (substt bdd arg h)
           end).
 Defined.
@@ -120,7 +118,7 @@ Definition unhalting := _Apply part_unhalting part_unhalting.
 
 
 
-Lemma classic_unhalting:
+Example classic_unhalting:
   forall v, ~ (unhalting \\ v).
   unfold not. intros.
   remember unhalting as c.
@@ -131,3 +129,9 @@ Lemma classic_unhalting:
   simpl in H5. simpl in H4. rewrite eq_id_dec_id in H5. subst v1. fold unhalting in H5. auto.
 Qed.
 
+
+
+Inductive _EExp : Set :=
+| e_ext : forall cont: _Exp, {i : id & { exp | cont = _Lamb i exp}} -> nat -> _EExp.
+
+(* With side effect. *)

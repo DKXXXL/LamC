@@ -57,4 +57,14 @@ Definition token := string.
 
 Fixpoint tokenise_helper (cls:chartype) (acc xs : list ascii)
 : list (list ascii) :=
-  let tk:= match acc with [] => []
+  let tk:= match acc with [] => [] | _ :: _ => [rev acc] end in
+  match xs with
+    | [] => tk
+    | (x :: xs') =>
+      match cls, classifyChar x, x with
+        | _, _, "(" =>
+          tk ++ ["("] :: (tokenize_helper other [] xs')
+        | _, _, ")" =>
+          tk ++ [")"] :: (tokenize_helper other [] xs')
+        | _, white, _ =>
+          tk ++ 

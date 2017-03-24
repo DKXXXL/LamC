@@ -1,2 +1,2 @@
 # LamC
-A Coq Implement STLC, most code copied from 'Software Foundations'
+Most code are exercise of Software Foundations.

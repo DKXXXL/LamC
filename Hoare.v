@@ -576,7 +576,7 @@ Require Import Coq.Logic.FunctionalExtensionality.
       intro. case (eq_id_dec X x); auto.
       rewrite H1. apply H0.
     Qed.
-
+End HIMP.
 
     
     

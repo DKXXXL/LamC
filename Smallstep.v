@@ -845,6 +845,7 @@ eapply multi_step. eapply CS_Par2. eapply CS_IfTrue.
 cal_par CS_Par2 CS_Par2 CS_Par2 0.
 Abort.
 
+End CImp.
 
 Definition stack := list nat.
 Definition prog := list sinstr.

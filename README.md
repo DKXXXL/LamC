@@ -1,2 +1,5 @@
 # LamC
-Most code are exercise of Software Foundations.
+Exercises about Lambda Calculus.
+
+
+*** Software Foundations 

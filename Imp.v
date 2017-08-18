@@ -569,9 +569,3 @@ Qed.
     intros. inversion Heqc0. rewrite H6 in H4; rewrite H7 in H4; auto.
     intros. inversion Heqc0. rewrite H2 in H0. simpl in H0. inversion H0.
   Qed.
-
-    Theorem loop_never_stops___:
-    forall st st', ~(loop / st \\ st').
-      unfold loop. unfold not.
-      intros. remember (WHILE BTrue DO SKIP END) as c.
-      generalize Heqc. elim H

@@ -120,3 +120,4 @@ Abort.
 
 (* Failed : Inductive Definition not right *)
 
+(* A Testing on Proof by Vscode.*)

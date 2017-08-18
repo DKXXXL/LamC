@@ -62,7 +62,7 @@ Fixpoint subst (x:id) (s:tm) (t:tm) : tm :=
   match t with
     | tvar x' => if (eq_id_dec x x') then s else t
     | tapp abs arg => tapp ([x := s] abs) ([x:=s] arg)
-    | tabs x' T t' => if (eq_id_dec x x') then t else tabs x' T ([x := s] t')
+    | tabs x' T t' => if (eq_id_dec x x') then tabs x' T t else tabs x' T ([x := s] t')
     | ttrue => ttrue
     | tfalse => tfalse
     | tif a b c => tif ([x:=s]a) ([x:=s] b) ([x:=s]c)

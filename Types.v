@@ -93,19 +93,19 @@ Qed.
 
 Ltac deterministic_try_contra :=
   (match goal with
-     | [H1 : ttrue = ?X1 |- _] => subst X1
-     | [H1 : ?X1 = ttrue |- _] => subst X1
-     | [H1 : tfalse = ?X1 |- _] => subst X1
-     | [H1 : ?X1 = tfalse |- _] => subst X1
-     | [H1 : tzero = ?X1 |- _] => subst X1
-     | [H1 : ?X1 = tzero |- _] => subst X1
-     | [H1 : tsucc ?X2 = ?X1 |- _] => subst X1
-     | [H1 : ?X1 = tsucc ?X2 |- _] => subst X1
-     | [H : ttrue ==> ?X |- _] => inversion H
-     | [H : tfalse ==> ?X |- _] => inversion H
-     | [H : tzero ==> ?X |- _] => inversion H
+     | [H1 : ttrue = ?X1 |- _] => subst X1 ; deterministic_try_contra
+     | [H1 : ?X1 = ttrue |- _] => subst X1 ; deterministic_try_contra
+     | [H1 : tfalse = ?X1 |- _] => subst X1 ; deterministic_try_contra
+     | [H1 : ?X1 = tfalse |- _] => subst X1 ; deterministic_try_contra
+     | [H1 : tzero = ?X1 |- _] => subst X1 ; deterministic_try_contra
+     | [H1 : ?X1 = tzero |- _] => subst X1 ; deterministic_try_contra
+     | [H1 : tsucc ?X2 = ?X1 |- _] => subst X1 ; deterministic_try_contra
+     | [H1 : ?X1 = tsucc ?X2 |- _] => subst X1 ; deterministic_try_contra
+     | [H : ttrue ==> ?X |- _] => inversion H ; deterministic_try_contra
+     | [H : tfalse ==> ?X |- _] => inversion H ; deterministic_try_contra
+     | [H : tzero ==> ?X |- _] => inversion H ; deterministic_try_contra
      | _ => fail
-   end); deterministic_try_contra.
+   end).
 
 
 Ltac is_nvalue_contra what proof :=

@@ -253,3 +253,36 @@ Tactic Notation "solve" "by" "inversion" :=
   solve by inversion 1.
 
 (** $Date: 2014-12-31 12:04:02 -0500 (Wed, 31 Dec 2014) $ *)
+
+
+Lemma exclusive_mid:
+  forall A,
+    {A} + {~A} ->
+    (A <-> ~~A).
+
+  split; intros.
+  intro. destruct (H1 H0).
+  destruct H; auto.
+  destruct (H0 n).
+Defined.
+
+Lemma contrapositive:
+  forall A B : Prop,
+  {A} + {~A} ->
+  (A -> B) ->
+  (~B -> ~A).
+
+  intros. destruct H.
+  destruct (H1 (H0 a)). auto.
+Defined.
+
+Lemma contrapositive_equiv:
+  forall A B: Prop,
+  {A} + {~A} ->
+  {B} + {~B} ->
+  ((A -> B) <-> (~B -> ~A)).
+
+  split; intros; destruct H; destruct H0; try tauto.
+Defined.
+
+

@@ -196,8 +196,86 @@ Theorem occurs_dec:
 
 Qed.
 
-Lemma 
 
+Lemma non_occur_context_rm:
+    forall v x i T U,
+        update U i x |- v \in T ->
+        ~occurs_free i v ->
+        U |- v \in T.
+    
+    intro. elim v; intros.
+
+    inversion H; subst; unfold update in *; unfold t_update in *; subst.
+    destruct eq_id_dec; subst. destruct (H0 (occurs_free_var i)).
+    auto.
+
+    inversion H1; subst. 
+    pose (contrapositive _ _ (occurs_dec _ _) (occurs_free_app_1 i t t0)).
+    pose (contrapositive _ _ (occurs_dec _ _) (occurs_free_app_2 i t t0)).  
+    pose (n H2) as h1; pose (n0 H2) as h2. eauto.
+    
+    inversion H0; subst. 
+    destruct (eq_id_dec i0 i); subst.
+    rewrite update_shadow in H7. eauto.
+    rewrite update_permute in H7. 
+    destruct (occurs_dec  t0 i0). 
+    pose (occurs_free_abs i0 i t _ o n). destruct (H1 o0).
+    pose (H _ _ _ _ H7 n0).
+    eapply T_Abs; eauto. auto.
+
+    inversion H; subst. auto.
+    inversion H; subst. auto.
+
+    inversion H2; subst.
+    pose (contrapositive _ _ (occurs_dec _ _) (occurs_free_if0 i t t0 t1)).
+    pose (contrapositive _ _ (occurs_dec _ _) (occurs_free_if1 i t t0 t1)).
+    pose (contrapositive _ _ (occurs_dec _ _) (occurs_free_if2 i t t0 t1)).
+    pose (H _ _ _ _ H8 (n H3)).
+    pose (H0 _ _ _ _ H10 (n0 H3)).
+    pose (H1 _ _ _ _ H11 (n1 H3)).
+    eauto.
+Qed.
+
+
+Lemma app_preserv_snd:
+forall t g x G T,
+    empty |- tabs x G t \in TArrow G T ->
+    empty |- g \in G ->
+    empty |- [x := g] t \in T.
+
+intro. elim t; intros. unfold subst in *.
+destruct (eq_id_dec); subst. inversion H; subst.
+unfold update in *; unfold t_update in *. inversion H3; subst.
+rewrite eq_id_dec_id in H4. inversion H4; subst; auto.
+
+inversion H; subst. 
+destruct (occurs_dec (tvar i) x0). inversion o; subst.
+destruct (n eq_refl). eapply non_occur_context_rm; eauto.
+
+change (empty |- tapp ([x0 := g] t0) ([x0 := g] t1) \in T ).
+inversion H1; subst. inversion H5;subst. eapply  T_App.
+eapply H. eauto. eauto. eauto.
+
+inversion H0; subst. inversion H4; subst.
+destruct (eq_id_dec x0 i); subst. rewrite update_shadow in H8.
+unfold subst. rewrite eq_id_dec_id.
+
+
+
+    
+
+
+
+    
+
+
+
+    
+
+
+
+    
+    
 
 
     

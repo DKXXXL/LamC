@@ -106,6 +106,108 @@ forall t g x G T,
 
 
 
+Lemma app_preserv_snd:
+    forall t g x G T C,
+        C |- tabs x G t \in TArrow G T ->
+        empty |- g \in G ->
+        C |- [x := g] t \in T.
+
+    intro. elim t; intros. unfold subst in *.
+    destruct (eq_id_dec); subst. inversion H; subst.
+    unfold update in *; unfold t_update in *. inversion H3; subst.
+    rewrite eq_id_dec_id in H4. inversion H4; subst; auto.
+
+    Abort.
+
+Lemma context_empty:
+    forall g T,
+    empty |- g \in T -> 
+    (forall C,
+        C |- g \in T).
+    
+    intro. elim g; intros; unfold empty in *; unfold t_empty in *.
+
+    inversion H; subst. inversion H2.
+    inversion H1; subst. 
+    pose (H _ H5); pose (H0 _ H7).
+    eauto.
+
+    inversion H0; subst. unfold update in *; unfold t_update in *.    
+Abort.
+
+Inductive occurs_free: id -> tm -> Prop :=
+    | occurs_free_var : 
+        forall i,
+            occurs_free i (tvar i)
+    | occurs_free_app_1 :
+        forall i lamb arg,
+            occurs_free i lamb ->
+            occurs_free i (tapp lamb arg)
+    | occurs_free_app_2 :
+        forall i lamb arg,
+            occurs_free i arg ->
+            occurs_free i (tapp lamb arg)
+    | occurs_free_abs :
+        forall i x T t,
+            occurs_free i t ->
+            i <> x ->
+            occurs_free i (tabs x T t)
+    | occurs_free_if0 :
+        forall i t t1 t2,
+            occurs_free i t ->
+            occurs_free i (tif t t1 t2)
+    | occurs_free_if1 :
+        forall i t t1 t2,
+            occurs_free i t1 ->
+            occurs_free i (tif t t1 t2)
+    | occurs_free_if2 :
+        forall i t t1 t2,
+            occurs_free i t2 ->
+            occurs_free i (tif t t1 t2).
+
+Hint Constructors occurs_free.
+
+
+Theorem occurs_dec:
+    forall x i,
+    {occurs_free i x} + {~ (occurs_free i x)}.
+
+    intro. elim x0; intros.
+    destruct (eq_id_dec i i0); subst.
+    left; auto. right; intro.
+    inversion H; subst. destruct (n eq_refl).
+    
+    destruct (H i). left; auto.
+    destruct (H0 i). left; auto.
+    right. intro. inversion H1; subst; tauto.
+
+    destruct (H i0). destruct (eq_id_dec i0 i); subst.
+    right; intro. inversion H0; subst. destruct (H6 eq_refl).
+    left; try auto. right; intro. inversion H0; subst. destruct (n H4).
+
+    right; intro. inversion H.
+    right; intro. inversion H.
+
+    destruct (H i). left; auto.
+    destruct (H0 i). left; auto.
+    destruct (H1 i). left; auto.
+    right; intro. inversion H2; subst. 
+    destruct (n H5). destruct (n0 H5). destruct (n1 H5).
+
+Qed.
+
+Lemma 
+
+
+
+    
+
+
+
+
+
+
+
 
 
 

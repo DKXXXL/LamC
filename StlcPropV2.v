@@ -236,7 +236,7 @@ Lemma non_occur_context_rm:
     eauto.
 Qed.
 
-
+(*
 Lemma app_preserv_snd:
 forall t g x G T,
     empty |- tabs x G t \in TArrow G T ->
@@ -257,11 +257,346 @@ inversion H1; subst. inversion H5;subst. eapply  T_App.
 eapply H. eauto. eauto. eauto.
 
 inversion H0; subst. inversion H4; subst.
-destruct (eq_id_dec x0 i); subst. rewrite update_shadow in H8.
-unfold subst. rewrite eq_id_dec_id.
+change (empty |- (if (eq_id_dec x0 i) then tabs i t0 t1 else tabs i t0 ([x0 := g] t1)) \in TArrow t0 T12).
+destruct (eq_id_dec x0 i); subst. rewrite update_shadow in H8. eauto.
+rewrite update_permute in H8; auto.
+pose (T_Abs _ _ _ _ _ H8).
+destruct (occurs_dec (tabs x0 G t1) i); subst.
+inversion o; subst. 
+Abort.
+*)
+
+(*
+    inversion H0; subst. 
+    inversion H4; subst.
+    change (U |- (if (eq_id_dec x0 i) then tabs i t0 t1 else tabs i t0 ([x0 := g] t1)) \in TArrow t0 T12).
+    destruct (eq_id_dec x0 i); subst. 
+    rewrite update_shadow in H8. eauto.
+    rewrite update_permute in H8; auto.
+    pose (T_Abs _ _ _ _ _ H8).
+    pose (H _ _ _ _ _ h H1). eauto.
+
+*)
+
+Lemma app_preserv_snd:
+forall t g x G T U,
+    U |- tabs x G t \in TArrow G T ->
+    empty |- g \in G ->
+    U |- [x := g] t \in T.
+
+intro. elim t; intros.
+
+    Focus 3.
+    inversion H0; subst. 
+    inversion H4; subst.
+    change (U |- (if (eq_id_dec x0 i) then tabs i t0 t1 else tabs i t0 ([x0 := g] t1)) \in TArrow t0 T12).
+    destruct (eq_id_dec x0 i); subst. 
+    rewrite update_shadow in H8. eauto.
+    rewrite update_permute in H8; auto.
+    pose (T_Abs _ _ _ _ _ H8).
+    pose (H _ _ _ _ _ h H1). eauto.
+Abort.
 
 
 
+Lemma occurs_free_non_empty_ctx:
+forall i x T G,
+    occurs_free i x ->
+    G |- x \in T ->
+    (exists V, G i = Some V).
+
+intros i x T G h. intros.
+
+generalize dependent T; generalize dependent G.
+elim h; subst; intros.
+inversion H; subst. exists T; auto.
+
+inversion H1; subst. eauto.
+
+inversion H1; subst. eauto.
+
+inversion H2; subst. destruct (H0 _ _ H8); subst.
+unfold update in *; unfold t_update in *. destruct (eq_id_dec x0 i0); try contradict; try auto.
+symmetry in e. destruct (H1 e). exists x1; auto.
+
+inversion H1; subst. eauto.
+inversion H1; subst. eauto.
+inversion H1; subst. eauto.
+
+Qed.
+
+
+Definition closed (t:tm) := 
+forall x, ~ occurs_free x t .
+
+
+
+Lemma empty_closed:
+    forall x T,
+        empty |- x \in T ->
+        closed x.
+    
+    unfold closed.
+
+    intros x T h i h1.
+    generalize dependent T.
+    elim h1; intros; subst.
+    
+    inversion h; subst. inversion H1.
+
+    inversion h; subst. eauto.
+    inversion h; subst. eauto.
+
+    inversion h; subst. 
+    destruct (occurs_free_non_empty_ctx _ _ _ _ H H7).
+    unfold update in *; unfold t_update in *.
+    destruct (eq_id_dec x0 i0). symmetry in e. destruct (H1 e).
+    inversion H2.
+
+    inversion h; subst. eauto.
+    inversion h; subst. eauto.
+    inversion h; subst. eauto.
+
+Qed.
+
+Lemma closed_infective_app:
+    forall x y,
+    closed (tapp x y) ->
+    closed x /\ closed y.
+
+    unfold closed; split; intros; intro.
+    pose (occurs_free_app_1 x1 x0 y0 H0).
+    destruct (H x1 o).
+    pose (occurs_free_app_2 x1 x0 y0 H0).
+    destruct (H x1 o).
+Qed.
+
+
+Inductive Ctx_len: context -> nat -> Prop :=
+    |  Ctx_empty : Ctx_len empty 0
+    |  Ctx_update :
+        forall i x n U,
+            Ctx_len U n ->
+            Ctx_len (update U i x) (S n).
+
+
+Lemma non_occur_context_add:
+    forall v x i T U,
+        U |- v \in T ->
+        ~occurs_free i v ->
+        update U i x |- v \in T.
+
+    intro v; elim v; intros.
+    eapply T_Var. unfold update; unfold t_update.
+    destruct (eq_id_dec i0 i); subst. 
+    destruct (H0 (occurs_free_var _)).
+    inversion H; subst. auto.
+
+    inversion H1; subst.
+    pose (contrapositive _ _ (occurs_dec _ _) (occurs_free_app_1 i t t0)).
+    pose (contrapositive _ _ (occurs_dec _ _) (occurs_free_app_2 i t t0)).
+    eapply T_App; eauto.
+
+    inversion H0; subst.
+    eapply T_Abs.
+    
+    destruct (eq_id_dec i0 i); subst.
+    rewrite update_shadow. auto.
+    destruct (occurs_dec t0 i0).
+    
+    pose (occurs_free_abs _ i t _ o n).
+    destruct (H1 o0). pose (H x0 i0 _ _ H7 n0).
+    rewrite update_permute. auto. auto.
+
+    inversion H; subst. eauto.
+    inversion H; subst. eauto.
+    pose (contrapositive _ _ (occurs_dec _ _) (occurs_free_if0 i t t0 t1)).
+    pose (contrapositive _ _ (occurs_dec _ _) (occurs_free_if1 i t t0 t1)).
+    pose (contrapositive _ _ (occurs_dec _ _) (occurs_free_if2 i t t0 t1)).
+    pose (n H3); pose (n0 H3); pose (n1 H3).
+    inversion H2; subst. eauto.
+
+Qed.
+
+Theorem context_invariance:
+    forall x (G G' : context) T,
+        G |- x \in T ->
+        (forall i, occurs_free i x -> G i = G' i) ->
+        G' |- x \in T.
+    
+    intro x.
+    induction x; intros. inversion H; subst.
+    pose (occurs_free_var i).
+    eapply T_Var. pose (H0 _ o).
+    rewrite <- e; auto.
+
+    inversion H; subst. 
+    assert (forall i: id, occurs_free i x1 -> G i = G' i).
+    intros. pose (occurs_free_app_1 i x1 x2 H1).
+    auto.
+    assert (forall i: id, occurs_free i x2 -> G i = G' i).
+    intros. pose (occurs_free_app_2 i x1 x2 H2).
+    auto.
+    eauto.
+
+    inversion H; subst.
+    eapply T_Abs. 
+    assert (forall i0:id, occurs_free i0 x0 -> (update G i t) i0 = (update G' i t)i0 ).
+    intros. unfold update; unfold t_update.
+    destruct (eq_id_dec i i0); subst. auto.
+    assert (i0 <> i). intro. symmetry in H2; tauto.
+    pose (occurs_free_abs _ _ t _ H1 H2).
+    auto. pose (IHx _ _ _ H6 H1). auto.
+
+    inversion H; subst; eauto.
+    inversion H; subst; eauto.
+    inversion H; subst; eauto.
+    assert (forall i: id, occurs_free i x1 -> G i = G' i). eauto.
+    assert (forall i: id, occurs_free i x2 -> G i = G' i). eauto.
+    assert (forall i: id, occurs_free i x3 -> G i = G' i). eauto.
+    eauto.
+Qed.
+
+Theorem empty_is_strong:
+    forall x G T,
+        empty |- x \in T ->
+        G |- x \in T.
+    
+    intros x G T h.
+    assert  (forall i, occurs_free i x -> empty i = G i).
+    Focus 1.
+    Print empty_closed.
+    intros. pose (empty_closed _ _ h).
+    unfold closed in *.
+    destruct (c _ H).
+    eapply context_invariance; eauto.
+Qed.
+
+
+Lemma app_preserv:
+forall t g x G T U,
+    U |- tabs x G t \in TArrow G T ->
+    empty |- g \in G ->
+    U |- [x := g] t \in T.
+
+intro. elim t; intros.
+    inversion H; subst.
+    unfold subst. inversion H3; subst.
+    unfold update in *; unfold t_update in *.
+    destruct (eq_id_dec x0 i); subst. inversion H4; subst. 
+    eapply empty_is_strong. auto.
+    eapply T_Var. auto.
+    
+    inversion H1; subst. inversion H5; subst.
+    pose (T_Abs _ _ _ _ _ H7).
+    pose (T_Abs _ _ _ _ _ H9).
+    pose (H _ _ _ _ _ h H2).
+    pose (H0 _ _ _ _ _ h0 H2).
+    change (U |- tapp ([x0 := g] t0) ([x0 := g] t1) \in T ).
+    eauto.
+
+    inversion H0; subst. inversion H4; subst.
+    change (U |- (if (eq_id_dec x0 i) then tabs i t0 t1 else tabs i t0 ([x0 := g] t1)) \in TArrow t0 T12).
+    destruct (eq_id_dec x0 i); subst. rewrite update_shadow in H8. eauto.
+    rewrite update_permute in H8; eauto.
+
+    inversion H; subst. inversion H3; subst. unfold subst; auto.
+    inversion H; subst. inversion H3; subst. unfold subst; auto.
+
+    inversion H2; subst.  inversion H6; subst.
+    pose (T_Abs _ _ _ _ _ H9).
+    pose (T_Abs _ _ _ _ _ H11).
+    pose (T_Abs _ _ _ _ _ H12).
+    change (U |- tif ([x0 := g] t0) ([x0 := g] t1) ([x0 := g] t2) \in T).
+    eauto.
+Qed.
+
+
+Theorem preservation :
+forall t t' T,
+    empty |- t \in T ->
+    t ==> t' ->
+    empty |- t' \in T.
+
+    intro.
+    elim t; intros.
+    inversion H; subst. inversion H3.
+
+    inversion H1; subst; inversion H2; subst; eauto.
+    inversion H6; subst. eapply app_preserv; eauto.
+
+    inversion H0; subst; inversion H1; subst; eauto.
+    
+    inversion H0. inversion H0. 
+    inversion H2; subst; inversion H3; subst; eauto.
+Qed.
+
+
+
+    
+
+
+
+
+    
+
+
+
+
+    
+    
+    
+
+    
+    
+    
+
+    
+    
+
+    
+
+    
+    
+
+     
+
+
+
+
+
+
+    
+
+    
+
+
+
+
+
+
+
+    
+
+
+
+
+    
+    
+
+
+
+    
+
+
+    
+    
+    
+
+    
+    
+
+    
     
 
 

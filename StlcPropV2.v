@@ -531,6 +531,56 @@ forall t t' T,
     inversion H2; subst; inversion H3; subst; eauto.
 Qed.
 
+Definition stuck (t: tm) : Prop :=
+    (normal_form step) t /\ ~ value t.
+
+Corollary soundness : forall t t' T,
+    empty |- t \in T ->
+    t ==>* t' ->
+    ~(stuck t').
+
+    intros t t' T h0 h.
+    generalize dependent h0;
+    generalize dependent T.
+    induction h; intros; unfold stuck in *; unfold normal_form in *; intro.
+    destruct H.  
+    destruct (progress _ _ h0); auto.
+    
+    pose (preservation _ _ _ h0 H).
+    pose (IHh _ h1). auto.
+Qed.
+
+Theorem types_unique:
+    forall x T G U,
+    U |- x \in T ->
+    U |- x \in G ->
+    T = G.
+    intro x. induction x; subst; intros.
+    inversion H; subst. inversion H0; subst.
+    rewrite H3 in H4. inversion H4; subst; auto.
+
+    inversion H; inversion H0; subst. 
+    pose (IHx1 _ _ _ H4 H10).
+    inversion e; subst; auto.
+
+    inversion H; inversion H0; subst.
+    pose (IHx _ _ _ H6 H12). rewrite e. auto.
+
+    inversion H; inversion H0; subst; auto.
+    inversion H; inversion H0; subst; auto.
+
+    inversion H; inversion H0; subst. 
+    pose (IHx2 _ _ _ H7 H15). auto.
+Qed.
+
+End STLCPROP.
+
+
+
+
+
+
+
 
 
     

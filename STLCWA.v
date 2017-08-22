@@ -6,6 +6,90 @@ Require Import Smallstep.
 Require Import Coq.Relations.Relation_Definitions.
 
 
+Inductive Context {type : Type} : Type :=
+| empty : Context
+| update : id -> type -> Context -> Context.
+
+Hint Constructors Context.
+
+Fixpoint byContext {type : Type} (ctx : Context) (i : id) : option type :=
+match ctx with 
+    | empty => None
+    | update x Ty ctx' =>
+        if (eq_id_dec i x) then Some Ty else byContext ctx' i
+        end.
+
+
+Definition context_equivalence {type : Type}  : relation Context :=
+        fun (x y : Context (type := type)) => forall i, byContext x i = byContext y i.
+    
+    Notation "x '=-=' y" := (context_equivalence x y) (at level 40).
+    
+    
+    Print reflexive.
+    Print equiv.
+
+    
+    Theorem refl_ctxeq {x : Type}:
+        reflexive _ (context_equivalence (type := x )).
+        unfold reflexive; unfold context_equivalence. auto.
+    Qed.
+    
+    Theorem symm_ctxeq {x : Type}:
+        symmetric _ (context_equivalence (type := x)).
+        unfold symmetric; unfold context_equivalence. auto.
+    Qed.
+
+    Theorem trans_ctxeq {x : Type}:
+    transitive _ (context_equivalence (type :=x)).
+
+    unfold transitive.
+    
+    unfold context_equivalence.
+    intros. rewrite H; auto.
+Qed.
+
+Theorem equiv_ctxeq {x : Type}:
+    equiv _ (context_equivalence (type := x)).
+
+    unfold equiv.
+    pose (refl_ctxeq (x := x)). pose (symm_ctxeq (x := x)). pose (trans_ctxeq (x:= x)).
+    tauto.
+Qed.
+    
+    Theorem update_shadow {z : Type}:
+        forall i (x y : z) (U V : Context (type := z)),
+            U =-= V ->
+            update i x (update i y U) =-= update i x V.
+            
+        unfold context_equivalence. intros.
+        cbn. destruct (eq_id_dec i0 i); auto.
+    
+    Qed.
+    
+    Theorem update_permute {z : Type}:
+        forall i j (x y : z) U V,
+            i <> j ->
+            U =-= V ->
+            update i x (update j y U) =-= update j y (update i x U).
+    
+        unfold context_equivalence. 
+        intros. cbn. destruct (eq_id_dec i0 i); destruct (eq_id_dec i0 j); auto; subst.
+        destruct (H eq_refl).
+    Qed.
+    
+    Theorem update_inc {z : Type}:
+        forall i (x: z) U V,
+            U =-= V ->
+            update i x U =-= update i x V.
+    
+        unfold context_equivalence.
+        intros. cbn. destruct (eq_id_dec i0 i); subst; auto.
+    Qed.
+
+
+
+
 Module STLCARITH.
 
 
@@ -27,18 +111,6 @@ Inductive tm : Type :=
 (* Weak Typing. 0 as False, others are true. *)
 
     Hint Constructors tm.
-
-Inductive Context {type : Type} : Type :=
-    | empty : Context
-    | update : id -> type -> Context -> Context.
-    
-    Hint Constructors Context.
-Fixpoint byContext (ctx : Context) (i : id) : option ty :=
-    match ctx with 
-        | empty => None
-        | update x Ty ctx' =>
-            if (eq_id_dec i x) then Some Ty else byContext ctx' i
-            end.
 
 Reserved Notation "Gamma '|=' t '\in' T" (at level 40).            
 
@@ -376,86 +448,7 @@ Theorem equiv_ctx_eq:
     equiv context_equivalence.
 *)
 
-Definition context_equivalence : relation Context :=
-    fun (x y : Context) => forall i, byContext x i = byContext y i.
 
-Notation "x '=-=' y" := (context_equivalence x y) (at level 40).
-
-
-Print reflexive.
-Print equiv.
-
-Theorem equiv_ctx_eq:
-    equiv _ context_equivalence.
-
-    unfold equiv; split.
-    unfold reflexive; intros. intro. auto.
-    split. unfold transitive.
-    intros x y. generalize dependent x.
-    elim y. intros.
-    unfold context_equivalence in *.
-    intros; eauto. 
-    rewrite H. rewrite H0. auto.
-
-
-(*
-    unfold context_equivalence in *.
-    
-    intros. cbn in *.
-    destruct (eq_id_dec i0 i); subst. 
-    pose (H0 i); pose (H1 i). repeat rewrite eq_id_dec_id in *.
-    rewrite e; auto.
-
-    assert (forall i, byContext x i = byContext c i).
-    intros.
-    destruct (eq_id_dec i0 i). pose (H0 i0). 
-*)
-    intros i t c h x. generalize dependent i;
-    generalize dependent t; generalize dependent h.
-    induction x. intros. unfold context_equivalence in *.
-    pose (H i). inversion e. rewrite eq_id_dec_id in *. inversion H2.
-    intros. 
-    Abort.
-
-Theorem refl_ctxeq:
-    reflexive _ context_equivalence.
-    unfold reflexive; unfold context_equivalence. auto.
-Qed.
-
-Theorem symm_ctxeq:
-    symmetric _ context_equivalence.
-    unfold symmetric; unfold context_equivalence. auto.
-Qed.
-
-Theorem update_shadow:
-    forall i x y U V,
-        U =-= V ->
-        update i x (update i y U) =-= update i x V.
-        
-    unfold context_equivalence. intros.
-    cbn. destruct (eq_id_dec i0 i); auto.
-
-Qed.
-
-Theorem update_permute :
-    forall i j x y U V,
-        i <> j ->
-        U =-= V ->
-        update i x (update j y U) =-= update j y (update i x U).
-
-    unfold context_equivalence. 
-    intros. cbn. destruct (eq_id_dec i0 i); destruct (eq_id_dec i0 j); auto; subst.
-    destruct (H eq_refl).
-Qed.
-
-Theorem update_inc:
-    forall i x U V,
-        U =-= V ->
-        update i x U =-= update i x V.
-
-    unfold context_equivalence.
-    intros. cbn. destruct (eq_id_dec i0 i); subst; auto.
-Qed.
 
 Inductive occurs_free : id -> tm -> Prop :=
     | occurs_free_var :
@@ -556,7 +549,7 @@ Theorem ctx_swap:
     eapply tyVar. rewrite <- H0. auto.
 
     eapply tyAbs. 
-    pose (update_inc).
+    pose (update_inc (z := ty)).
     pose (update_inc i G _ _ H).
     eauto.
 Qed.
@@ -898,6 +891,9 @@ Theorem types_unique:
 Qed.
     
 End STLCARITH.
+
+
+
 
 
 

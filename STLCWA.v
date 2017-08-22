@@ -1,6 +1,8 @@
 
 Require Import SfLib.
 
+Require Import Smallstep.
+
 Require Import Coq.Relations.Relation_Definitions.
 
 
@@ -710,68 +712,194 @@ Theorem empty_means_closed:
 Qed.
 
 
+Theorem empty_is_strong:
+    forall x T U,
+        empty |= x \in T ->
+        U |= x \in T.
+
+    intros x T U. 
+    generalize dependent x;
+    generalize dependent T.
+    induction U; intros; auto.
+    pose (empty_means_closed x T H).
+    unfold closed in c.
+    pose (c i).
+    Print non_occurs_free_ctx_rm.
+    Abort.
+
+Theorem occurs_free_ctx_add :
+    forall i j x T U,
+    U |= x \in T ->
+    ~(occurs_free i x) ->
+    update i j U |= x \in T.
+
+    intros i j x.
+    generalize dependent i;
+    generalize dependent j.
+
+    induction x; eauto.
+    intros. inversion H; subst.
+    eapply tyVar. cbn.
+    destruct (eq_id_dec i i0); subst.
+    destruct (H0 (occurs_free_var i0)).
+    auto.
+
+    intros. inversion H; subst. eapply tyApp; eauto.
+
+    intros. inversion H; subst. 
+    destruct (occurs_dec i0 x); subst.
+    destruct (eq_id_dec i0 i); subst.
+    eapply tyAbs. 
+    eapply ctx_swap. eapply H6. eapply symm_ctxeq.
+    eapply update_shadow. eapply refl_ctxeq.
+    assert (occurs_free i0 (tabs i t x)). eauto.
+    destruct (H0 H1).
+    destruct (eq_id_dec i0 i); subst.
+    eapply tyAbs. eapply ctx_swap. eapply H6.
+    eapply symm_ctxeq. eapply update_shadow. eapply refl_ctxeq.
+    eapply tyAbs. eapply ctx_swap. eapply IHx. eapply H6. eauto.
+    eapply update_permute; eauto. eapply refl_ctxeq.
+
+    intros. inversion H; subst; eauto.
+
+    intros. inversion H; subst; eauto. eapply tySucc; eauto.
+
+    intros. inversion H; subst;eauto. eapply tyPred; eauto.
+
+    intros. inversion H; subst; eauto. eapply tyMult; eauto.
+
+    intros. inversion H; subst; eauto. eapply tyIf; eauto.
+Qed.
+
+Theorem empty_is_strong:
+forall x T U,
+    empty |= x \in T ->
+    U |= x \in T.
+
+intros x T U. 
+generalize dependent x;
+generalize dependent T.
+induction U; intros; auto.
+pose (empty_means_closed x T H).
+unfold closed in c.
+pose (c i).
+eapply occurs_free_ctx_add; eauto.
+Qed.
+
+
+Lemma app_preserv:
+forall t x y T G U,
+    U |= tabs x T t \in TArrow T G ->
+    empty |= y \in T ->
+    U |= [x := y] t \in G.
+intro t. elim t; intros.
+inversion H; subst. unfold subst.
+inversion H3; subst. cbn in H4.
+destruct (eq_id_dec i x); subst. inversion H4; subst.
+rewrite eq_id_dec_id. eapply empty_is_strong; eauto.
+destruct (eq_id_dec x i); subst. destruct (n eq_refl).
+eapply tyVar; auto.
+
+inversion H1; subst.
+change (U |= tapp ([x := y] t0) ([x := y] t1) \in G).
+inversion H5; subst. 
+eapply tyApp; eauto.
+
+change (U |= tabs i t0 (if eq_id_dec i x then t1 else [x := y] t1) \in G).
+inversion H0; subst. inversion H4; subst.
+destruct (eq_id_dec i x); subst.
+eapply tyAbs. eapply ctx_swap. apply H8. eapply update_shadow. eapply refl_ctxeq.
+eapply tyAbs. eapply H. eapply tyAbs. eapply ctx_swap. eapply H8. eapply update_permute; eauto. eapply refl_ctxeq. auto.
+
+inversion H; subst. inversion H3; subst. unfold subst. eauto.
+
+inversion H0; subst. inversion H4; subst. 
+change (U |= tsucc ([x := y] t0) \in TNat).
+eapply tySucc. eapply H; eauto.
+
+inversion H0; subst. inversion H4; subst.
+change (U |= tpred ([x := y] t0) \in TNat).
+eauto.
+
+inversion H1; subst. inversion H5; subst.
+change (U |= tmult ([ x:= y] t0) ([x := y] t1) \in TNat).
+eapply tyMult; eauto.
+
+inversion H2; subst. inversion H6; subst.
+change (U |= tif0 ([x := y] t0) ([x := y] t1) ([x := y] t2) \in G).
+eapply tyIf; eauto.
+
+Qed.
+
+
+Theorem preservation :
+forall t t' T,
+    empty |= t \in T ->
+    step t t' ->
+    empty |= t' \in T.
+
+intro. elim t; intros.
+inversion H0.
+
+inversion H1; inversion H2; subst; eauto. inversion H6; subst.
+eapply app_preserv; eauto.
+
+inversion H1.
+
+inversion H0.
+
+inversion H1; subst. inversion H0; subst. eauto.
+
+inversion H0; subst. eauto.
+
+inversion H1; subst; inversion H0; subst; eauto.
+
+inversion H1; subst; inversion H2; subst; eauto.
+
+inversion H2; subst; inversion H3; subst; eauto.
+Qed.
+
+Definition stuck (t: tm) : Prop :=
+(normal_form step) t /\ ~ value t.
+
+Notation "t '==>*' t'" := (multi step t t') (at level 40).
+
+
+Corollary soundness : 
+    forall t t' T,
+        empty |= t \in T ->
+        t ==>* t' ->
+        ~(stuck t').
+
+    intros t t' T h0 h. generalize dependent T.
+    unfold stuck. unfold normal_form.
+    induction h; intros; auto; intro.
+    destruct H.
+    Print progress.
+    destruct (progress _ _ h0); eauto.
+    Print preservation.
+    pose (preservation _ _ _ h0 H). 
+    destruct ((IHh _ h1) H0).
+Qed.
+
+Theorem types_unique:
+    forall x T G U,
+    U |= x \in T ->
+    U |= x \in G ->
+    T = G.
+    intro x; induction x; eauto; intros; (try (inversion H; inversion H0; subst; eauto)).
+    inversion H; inversion H0; subst. rewrite H7 in H3. inversion H3; subst. auto.
+
+    inversion H; inversion H0; subst; eauto.
+    pose (IHx1 _ _ _ H4 H10). inversion e; subst; auto.
+
+    inversion H; inversion H0; subst. rewrite (IHx _ _ _ H6 H12); eauto.
+
+Qed.
     
 
 
 
-
-
-
-
-     
-    
-
-
-
-    
-
-
-
-
-
-
-
-
-    
-
-
-    
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-    
-
-
-
-     
-     
 
 
 

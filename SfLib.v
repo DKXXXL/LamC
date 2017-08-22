@@ -233,6 +233,15 @@ Proof with auto.
   intros. unfold extend. destruct (eq_id_dec x2 x1)...
 Qed.
 
+
+
+Theorem eq_id_dec_id:
+forall (A:Set) (t f:A) x,
+ (if (eq_id_dec x x) then t else f) = t.
+
+intros; case (eq_id_dec x x); auto.
+intros. elim (n eq_refl).
+Qed.   
 (** -------------------- *)
 
 (** * Some useful tactics *)

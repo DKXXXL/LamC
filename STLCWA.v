@@ -897,6 +897,7 @@ Theorem types_unique:
 
 Qed.
     
+End STLCARITH.
 
 
 

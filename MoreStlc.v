@@ -223,7 +223,7 @@ Inductive step : tm -> tm -> Prop :=
     | stApp :
         forall i x y T,
             value y ->
-            tapp (tabs i T x) y ==> ([i := x] y)
+            tapp (tabs i T x) y ==> ([i := y] x)
     | stSucc0 :
         forall x x',
             x ==> x' ->
@@ -314,6 +314,16 @@ Inductive step : tm -> tm -> Prop :=
         forall i j v lft rgt T,
             value (inr T v) ->
             scase (inr T v) i lft j rgt ==> [j := v] rgt
+    | stcons0 :
+        forall x y x',
+            x ==> x'->
+            tcons x y ==> tcons x' y
+    | stcons1 :
+        forall x y y',
+            value x ->
+            y ==> y' ->
+            tcons x y ==> tcons x y'    
+    
     | stlcase0 :
         forall x x' casenil head tail caselist,
             x ==> x' ->
@@ -382,6 +392,7 @@ Theorem stlcex_deterministic:
     try (inversion H3; subst; eauto; fail);
     try (inversion H2; subst; eauto; fail).
 
+    inversion H4; subst; eauto.
     inversion H3; inversion H4; subst; eauto.
     inversion H; subst; destruct (H7 eq_refl).
     inversion H5; subst; destruct (H3 eq_refl).
@@ -392,6 +403,119 @@ Theorem stlcex_deterministic:
     inversion H7; subst; eauto.
 Qed.
     
+Lemma canonical_form_bools:
+    forall t,
+        empty |= t \in TNat ->
+        value t ->
+        exists n, t = tnat n.
+
+    intros t h1 h2; inversion h2; subst; inversion h1; subst; eauto.
+Qed.
+
+Lemma canonical_form_fun:
+    forall t T U,
+        empty |= t \in TArrow T U ->
+        value t ->
+        exists x v, t = tabs x T v.
+    
+    intros t T U h1 h2; inversion h2; subst; inversion h1; subst; eauto.
+Qed.
+
+Print value.
+Lemma canonical_form_pair:
+    forall t U V,
+        empty |= t \in TProd U V ->
+        value t ->
+        exists a b,
+            value a /\ value b /\ t = tpair a b.
+        
+            intros t U V h1 h2; inversion h2; subst; inversion h1; subst; eauto; tauto.
+Qed.
+
+Lemma canonical_form_sum:
+    forall t U V,
+        empty |= t \in TSum U V ->
+        value t ->
+        exists x,
+            value x /\ (t = inr U x \/ t = inl V x).
+
+        intros t U V h1 h2; inversion h2; subst; inversion h1; subst; eauto; tauto.
+Qed.
+
+Lemma canonical_form_unit:
+    forall t,
+        empty |= t \in TUnit ->
+        value t ->
+        t = unit.
+
+        intros t h1 h2; inversion h2; subst; inversion h1; subst; eauto.
+Qed.
+
+Lemma canonical_form_list:
+    forall t T,
+        empty |= t \in TList T ->
+        value t ->
+        t = tnil T \/ (exists head tail,
+                        value head /\ value tail /\ t = tcons head tail).
+
+    intros t T h1 h2; inversion h2; subst; inversion h1; subst;  try tauto.
+    right; eauto; tauto.
+
+Qed.
+
+Theorem progress:
+    forall t T,
+        empty |= t \in T ->
+        value t \/ (exists t', t ==> t').
+
+    intros t; induction t; intros;
+    inversion H; subst; eauto;
+    try (repeat match goal with
+    | [H1 : _ -> _ -> value ?X \/ ?H |- _]
+        => assert (value X \/ H) as HHH; eauto;
+            destruct HHH; generalize H1; clear H1
+    end ; intros); try
+    (match goal with 
+        | [ |- value (?X) \/ _ ]
+            => assert (value X); eauto; try (tauto; eauto); fail
+            end); right;
+    
+    repeat (match goal with 
+        | [H1 : value ?T, H2 : _ |= ?T \in TNat |- _] =>
+            inversion H1; subst;inversion H2; subst;
+            generalize H1; generalize H2; clear H1; clear H2
+        | [H1 : value ?T, H2 : _ |= ?T \in TArrow _ _ |- _] =>
+        inversion H1; subst;inversion H2; subst;
+        generalize H1; generalize H2; clear H1; clear H2 
+        | [H1 : value ?T, H2 : _ |= ?T \in TProd _ _ |- _] =>
+        inversion H1; subst;inversion H2; subst;
+        generalize H1; generalize H2; clear H1; clear H2 
+        | [H1 : value ?T, H2 : _ |= ?T \in TSum _ _ |- _] =>
+        inversion H1; subst;inversion H2; subst;
+        generalize H1; generalize H2; clear H1; clear H2     
+            end); intros; try (esplit; eauto; fail)
+    ;
+    try (
+    repeat (match goal with
+    | [ H1 : exists _, _ |- _] => destruct H1
+    end); esplit; eauto; fail
+    ).
+
+    inversion H; subst. inversion H2.
+    destruct i; subst. exists t2; eauto.
+    assert (S i <> 0); eauto.
+    destruct i; subst. exists t2; eauto.
+    assert (S i <> 0); eauto.
+    destruct i; subst. exists t2; eauto.
+    assert (S i <> 0); eauto.
+    destruct i; subst. exists t2; eauto.
+    assert (S i <> 0); eauto.
+
+    inversion H1; subst; inversion H10; subst; eauto.
+    inversion H1; subst; inversion H10; subst; eauto.
+Qed.
+
+
 
 
 

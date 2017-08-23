@@ -169,11 +169,7 @@ Inductive value : tm -> Prop :=
         forall x y,
         value x ->
         value y ->
-        value (tcons x y)
-    | vfix :
-        forall x,
-            value x ->
-            value (tfix x).
+        value (tcons x y).
 
     Hint Constructors value.
 
@@ -241,7 +237,7 @@ Inductive step : tm -> tm -> Prop :=
             tpred x ==> tpred x'
     | stPred1 :
         forall x,
-            tsucc (tnat x) ==> tnat (pred x)
+            tpred (tnat x) ==> tnat (pred x)
     | stMult0 :
         forall x x' y,
             x ==> x' ->
@@ -288,6 +284,7 @@ Inductive step : tm -> tm -> Prop :=
             tfst x ==> tfst x'
     | stFst1 :
         forall x y,
+            value (tpair x y) ->
             tfst (tpair x y) ==> x
     | stSnd0 :
         forall x x',
@@ -295,6 +292,7 @@ Inductive step : tm -> tm -> Prop :=
             tsnd x ==> tsnd x'
     | stSnd1 :
         forall x y,
+            value (tpair x y) ->
             tsnd (tpair x y) ==> y
     | stinl :
         forall v v' T,
@@ -310,9 +308,11 @@ Inductive step : tm -> tm -> Prop :=
             scase x i lft j rgt ==> scase x' i lft j rgt
     | stscasel :
         forall i j v lft rgt T,
+            value (inl T v) ->
             scase (inl T v) i lft j rgt ==> [i := v] lft
     | stscaser :
         forall i j v lft rgt T,
+            value (inr T v) ->
             scase (inr T v) i lft j rgt ==> [j := v] rgt
     | stlcase0 :
         forall x x' casenil head tail caselist,
@@ -340,6 +340,59 @@ Inductive step : tm -> tm -> Prop :=
             
     Hint Constructors step.      
     
+
+Lemma value_cant_step :
+    forall u v,
+        value u ->
+        u ==> v ->
+        False.
+    intros u v h.
+    generalize dependent v.
+    induction h; intros; try inversion H; subst; eauto.
+
+Qed.
+
+Ltac value_stepping_false :=
+    match goal with
+        | [H1: ?X1 ==> ?X2 |- _] 
+            => assert (value X1) as HHH; eauto;
+                destruct (value_cant_step _ _ HHH H1); fail
+        end.
+Ltac clear_value_stepping :=
+    repeat value_stepping_false.
+
+
+
+
+
+
+
+Theorem stlcex_deterministic:
+    deterministic step.
+    
+    unfold deterministic.
+    intros x; induction x; 
+    try (intros y1 y2 h1 h2;
+    inversion h1; inversion h2; subst;
+    match goal with
+    | [H1 : ?X ==> ?Y, H2 : ?X ==> ?Z |- _] =>
+        assert (Y = Z); eauto; subst; eauto
+        end);
+    try value_stepping_false;
+    try (inversion H3; subst; eauto; fail);
+    try (inversion H2; subst; eauto; fail).
+
+    inversion H3; inversion H4; subst; eauto.
+    inversion H; subst; destruct (H7 eq_refl).
+    inversion H5; subst; destruct (H3 eq_refl).
+    inversion H6; subst; eauto.
+    inversion  H6. inversion H6.
+    inversion H6; subst; eauto.
+    inversion H. inversion H8. 
+    inversion H7; subst; eauto.
+Qed.
+    
+
 
 
 

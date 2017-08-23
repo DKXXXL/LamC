@@ -29,6 +29,8 @@ Inductive tm : Type :=
     | tif0 : tm -> tm -> tm -> tm
     | tlet : id -> tm -> tm -> tm 
     | tpair : tm -> tm -> tm 
+    | tfst : tm -> tm
+    | tsnd : tm -> tm
     | inl : ty -> tm -> tm 
     | inr : ty -> tm -> tm
     | scase : tm -> id -> tm -> id -> tm -> tm
@@ -92,6 +94,14 @@ Inductive has_type : Context -> tm -> ty -> Prop :=
             G |= x \in U ->
             G |= y \in V ->
             G |= tpair x y \in TProd U V
+    | tyFst :
+        forall x G U V,
+            G |= x \in TProd U V ->
+            G |= tfst x \in U
+    | tySnd :
+            forall x G U V,
+                G |= x \in TProd U V ->
+                G |= tsnd x \in V
     | tySum0 :
         forall x U V G,
             G |= x \in U ->
@@ -181,6 +191,8 @@ Fixpoint subst (x : id) (s : tm) (org : tm) : tm :=
         | tif0 t t0 t1 => tif0 ([x := s] t) ([x := s] t0) ([x := s] t1)
         | tlet t u v => if(eq_id_dec t x) then org else tlet t u ([x := s] v)
         | tpair a b => tpair ([ x:= s] a) ([x := s] b)
+        | tfst t => tfst ([x := s] t)
+        | tsnd t => tsnd ([x := s] t)
         | inl T v => inl T ([x := s] v)
         | inr T v => inr T ([x := s] v)
         | scase m ia lft ib rgt => 
@@ -196,9 +208,139 @@ Fixpoint subst (x : id) (s : tm) (org : tm) : tm :=
         end
         where "'[' x ':=' s ']' t" := (subst x s t).
 
+        Hint Constructors value.
 
-        
-        
+Print tm.
+
+Reserved Notation "t '==>' t'" (at level 40).
+
+Inductive step : tm -> tm -> Prop :=
+    | stApp1 : 
+        forall x y x',
+            x ==> x' ->
+            tapp x y ==> tapp x' y
+    | stApp2 :
+        forall x y y',
+            value x ->
+            y ==> y' ->
+            tapp x y ==> tapp x y'
+    | stApp :
+        forall i x y T,
+            value y ->
+            tapp (tabs i T x) y ==> ([i := x] y)
+    | stSucc0 :
+        forall x x',
+            x ==> x' ->
+            tsucc x ==> tsucc x'
+    | stSucc1 :
+        forall x,
+            tsucc (tnat x) ==> tnat (S x)
+    | stPred0 :
+        forall x x',
+            x ==> x' ->
+            tpred x ==> tpred x'
+    | stPred1 :
+        forall x,
+            tsucc (tnat x) ==> tnat (pred x)
+    | stMult0 :
+        forall x x' y,
+            x ==> x' ->
+            tmult x y ==> tmult x' y
+    | stMult1 :
+        forall x y y',
+            value x ->
+            y ==> y' ->
+            tmult x y ==> tmult x y'
+    | stMult2 :
+        forall a b,
+            tmult (tnat a) (tnat b) ==> tnat (a * b)
+    | stIf:
+        forall t t' t1 t2,
+            t ==> t' ->
+            tif0 t t1 t2 ==> tif0 t' t1 t2
+    | stIf0 :
+        forall t1 t2,
+            tif0 (tnat 0) t1 t2 ==> t1
+    | stIf1 :
+        forall i t1 t2,
+            i <> 0 ->
+            tif0 (tnat i) t1 t2 ==> t2
+    | stlet0 :
+        forall i t t' v,
+            t ==> t' ->
+            tlet i t v ==> tlet i t' v
+    | stlet1 :
+        forall i t v,
+            value t ->
+            tlet i t v ==> [i := t] v
+    | stpair0 :
+        forall a a' b,
+            a ==> a' ->
+            tpair a b ==> tpair a' b
+    | stpair1 :
+        forall a b b',
+            value a ->
+            b ==> b' ->
+            tpair a b ==> tpair a b'
+    | stFst0 :
+        forall x x',
+            x ==> x' ->
+            tfst x ==> tfst x'
+    | stFst1 :
+        forall x y,
+            tfst (tpair x y) ==> x
+    | stSnd0 :
+        forall x x',
+            x ==> x' ->
+            tsnd x ==> tsnd x'
+    | stSnd1 :
+        forall x y,
+            tsnd (tpair x y) ==> y
+    | stinl :
+        forall v v' T,
+            v ==> v' ->
+            inl T v ==> inl T v'
+    | stinr :
+        forall v v' T,
+            v ==> v' ->
+            inr T v ==> inr T v'
+    | stscase0 :
+        forall x x' i lft j rgt,
+            x ==> x' ->
+            scase x i lft j rgt ==> scase x' i lft j rgt
+    | stscasel :
+        forall i j v lft rgt T,
+            scase (inl T v) i lft j rgt ==> [i := v] lft
+    | stscaser :
+        forall i j v lft rgt T,
+            scase (inr T v) i lft j rgt ==> [j := v] rgt
+    | stlcase0 :
+        forall x x' casenil head tail caselist,
+            x ==> x' ->
+            lcase x casenil head tail caselist ==> 
+                lcase x' casenil head tail caselist
+    | stlcasen :
+        forall head tail casenil caselist T,
+            lcase (tnil T) casenil head tail caselist ==>
+                casenil
+    | stlcasel :
+        forall head tail casenil caselist h t,
+            value h ->
+            value t ->
+            lcase (tcons h t) casenil head tail caselist ==>
+                ([head := h] ([tail := t] caselist))
+    | stlfix0 :
+        forall x x',
+            x ==> x' ->
+            tfix x ==> tfix x'
+    | stlfix1 :
+        forall x T v,
+            tfix (tabs x T v) ==> [x := tfix (tabs x T v)] v 
+    where "t '==>' t'" := (step t t').
+            
+    Hint Constructors step.      
+    
+
 
 
 

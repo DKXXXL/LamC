@@ -516,9 +516,154 @@ Theorem progress:
 Qed.
 
 
+(* We need the 'occurs_free' tool again. *)
+Print tm.
 
+Inductive occurs_free : id -> tm -> Prop :=
+    | occurs_free_var :
+        forall i,
+            occurs_free i (tvar i)
+    | occurs_free_abs :
+        forall i j v T,
+            i <> j ->
+            occurs_free i v ->
+            occurs_free i (tabs j T v)
+    | occurs_free_app0 :
+        forall i a b,
+            occurs_free i a ->
+            occurs_free i (tapp a b) 
+    | occurs_free_app1 :
+            forall i a b,
+                occurs_free i b ->
+                occurs_free i (tapp a b) 
+    | occurs_free_succ :
+        forall i x,
+            occurs_free i x ->
+            occurs_free i (tsucc x)
+    | occurs_free_pred :
+        forall i x,
+            occurs_free i x ->
+            occurs_free i (tpred x)
+    | occurs_free_mult0:
+        forall i a b,
+            occurs_free i a ->
+            occurs_free i (tmult a b)
+    | occurs_free_mult1:
+            forall i a b,
+                occurs_free i b ->
+                occurs_free i (tmult a b)     
+    | occurs_free_if0 :
+        forall i t t0 t1,
+            occurs_free i t ->
+            occurs_free i (tif0 t t0 t1)
+    | occurs_free_if1 :
+            forall i t t0 t1,
+                occurs_free i t0 ->
+                occurs_free i (tif0 t t0 t1)
+    | occurs_free_if2 :
+            forall i t t0 t1,
+                occurs_free i t1 ->
+                occurs_free i (tif0 t t0 t1)
+    | occurs_free_let :
+        forall i j x v,
+            occurs_free i v ->
+            i <> j ->
+            occurs_free i (tlet j x v)
+    | occurs_free_pair0:
+        forall i a b,
+            occurs_free i a ->
+            occurs_free i (tpair a b)
+    | occurs_free_pair1:
+            forall i a b,
+                occurs_free i b ->
+                occurs_free i (tpair a b)
+    | occurs_free_fst:
+        forall i x,
+            occurs_free i x ->
+            occurs_free i (tfst x)
+    | occurs_free_snd :
+        forall i x,
+            occurs_free i x ->
+            occurs_free i (tsnd x)
+    | occurs_free_inl :
+        forall i x T,
+            occurs_free i x ->
+            occurs_free i (inl T x)
+    | occurs_free_inr :
+        forall i x T,
+            occurs_free i x ->
+            occurs_free i (inr T x)
+    | occurs_free_scase:
+        forall i x u v lft rgt,
+            occurs_free i x ->
+            occurs_free i (scase x u lft v rgt)
+    | occurs_free_scase0:
+        forall i x u v lft rgt,
+            i <> u ->
+            occurs_free i lft ->
+            occurs_free i (scase x u lft v rgt)
+    | occurs_free_scase1:
+        forall i x u v lft rgt,
+            i <> v ->
+            occurs_free i rgt ->
+            occurs_free i (scase x u lft v rgt)
+    | occurs_free_cons0:
+        forall i h t,
+            occurs_free i h ->
+            occurs_free i (tcons h t)
+    | occurs_free_cons1:
+        forall i h t,
+            occurs_free i t ->
+            occurs_free i (tcons h t)
+    | occurs_free_lcase:
+        forall i l h t casenil casel,
+            occurs_free i l ->
+            occurs_free i (lcase l casenil h t casel)
+    | occurs_free_lcase0:
+        forall i l h t casenil casel,
+            occurs_free i casenil ->
+            occurs_free i (lcase l casenil h t casel)
+    | occurs_free_lcase1:
+            forall i l h t casenil casel,
+                i <> h ->
+                i <> t ->
+                occurs_free i casel ->
+                occurs_free i (lcase l casenil h t casel).
 
+    Hint Constructors occurs_free.
+Theorem occurs_dec :
+    forall i x,
+        {occurs_free i x} + {~occurs_free i x}.
 
+    intros i x; generalize dependent i.
+    induction x;
+    intro ii;
+    repeat (match goal with
+        | [Hx : _ -> {_} + {_} |- _] =>
+            destruct (Hx ii); generalize Hx; clear Hx
+        end);
+    intros;
+    match goal with
+    | [|- {?H} + {~?H}] =>
+        try (assert H as HH; eauto; fail);
+        try (assert (~H) as HH; eauto; intro HHH; inversion HHH; subst; eauto; fail)
+    end.
 
+    intros. destruct (eq_id_dec ii i); subst. left; eauto.
+    right; intro h; inversion h; subst; destruct (n eq_refl).
 
+    destruct (eq_id_dec ii i); subst. right; intro HH; inversion HH; subst. destruct (H2 eq_refl).
+    left; eauto.
+    destruct (eq_id_dec ii i); subst. right; intro HH; inversion HH; subst. destruct (H4 eq_refl).
+    left; eauto.
+    destruct (eq_id_dec ii i); subst. right; intro HH; inversion HH; subst. destruct (H4 eq_refl).
+    left; eauto.
+    destruct (eq_id_dec ii i); destruct (eq_id_dec ii i0); subst; eauto. right; intro HH; inversion HH; subst; eauto.
+    destruct (eq_id_dec ii i); destruct (eq_id_dec ii i0); subst; eauto. right; intro HH; inversion HH; subst; eauto. right ; intro HH; inversion HH; subst; eauto.
+    destruct (eq_id_dec ii i); destruct (eq_id_dec ii i0); subst; eauto. right; intro HH; inversion HH; subst; eauto. right ; intro HH; inversion HH; subst; eauto.
+    destruct (eq_id_dec ii i); destruct (eq_id_dec ii i0); subst; eauto;
+    try (right; intro HH; inversion HH; subst; eauto; fail);
+    try (left; eauto).
+Qed. 
 
+Theorem 

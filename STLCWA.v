@@ -35,11 +35,14 @@ Definition context_equivalence {type : Type}  : relation Context :=
         unfold reflexive; unfold context_equivalence. auto.
     Qed.
     
+    Hint Unfold reflexive.
+
     Theorem symm_ctxeq {x : Type}:
         symmetric _ (context_equivalence (type := x)).
         unfold symmetric; unfold context_equivalence. auto.
     Qed.
 
+    Hint Unfold symmetric.
     Theorem trans_ctxeq {x : Type}:
     transitive _ (context_equivalence (type :=x)).
 
@@ -48,6 +51,8 @@ Definition context_equivalence {type : Type}  : relation Context :=
     unfold context_equivalence.
     intros. rewrite H; auto.
 Qed.
+
+Hint Unfold transitive.
 
 Theorem equiv_ctxeq {x : Type}:
     equiv _ (context_equivalence (type := x)).

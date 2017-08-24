@@ -666,4 +666,112 @@ Theorem occurs_dec :
     try (left; eauto).
 Qed. 
 
-Theorem 
+Definition closed (t : tm) :=
+    forall i, ~occurs_free i t.
+
+Lemma occurs_free_in_ctx:
+    forall x i G T,
+        G |= x \in T ->
+        occurs_free i x ->
+        exists U, byContext G i = Some U.
+    intro x; induction x; 
+    try (intros i G T h1 h2; inversion h1; inversion h2; subst; eauto; fail
+    );
+    try (
+        intros i0 G T h1 h2; inversion h1; inversion h2; subst;
+        repeat (match goal with 
+            | [H1 : _ -> _ -> _ -> _ |= ?x \in  _ -> occurs_free _ ?x -> _ ,
+                H2: _ |= ?x \in _, 
+                H3 : occurs_free _ ?x |- _ ] => 
+                destruct (H1 _ _ _ H2 H3); generalize H1 H2 H3; clear H1 H2 H3
+        end) ;intros; cbn in *; 
+        destruct (eq_id_dec i0 i); subst;
+        try (
+            match goal with
+                | [H1 : ?x <> ?x |- _] => destruct (H1 eq_refl)
+            end
+        );
+        eauto).
+
+    intros. inversion H0 ; inversion H; subst. eauto.
+    intros. inversion H0; inversion H; subst; eauto.
+    destruct (IHx2 _ _ _ H16 H8). cbn in  *.
+    destruct (eq_id_dec i1 i); subst; eauto. destruct (H4 eq_refl).
+    intros. 
+    destruct (IHx3 _ _ _ H17 H8). cbn in  *.
+    destruct (eq_id_dec i1 i0); subst; eauto. 
+    destruct (H4 eq_refl).
+    intros. inversion H; inversion H0; subst; eauto.
+    destruct (IHx3 _ _ _ H10 H20). cbn in *.
+    destruct (eq_id_dec i1 i); destruct (eq_id_dec i1 i0); subst;
+    try (match goal with
+        | [H1 : ?x <> ?x |- _] => destruct (H1 eq_refl)
+    end); eauto.
+
+Qed.
+
+Theorem empty_is_closed:
+    forall x T,
+        empty |= x \in T ->
+        closed x.
+
+    unfold closed; unfold not.
+    intro x; induction x;
+    try (intros T h1 k h2; inversion h1; inversion h2; subst; eauto; fail);
+    try (    intros;
+    pose occurs_free_in_ctx as e;
+    destruct (e _ _ _ _ H H0); inversion H1).
+Qed.
+
+
+Theorem ctx_swap:
+    forall x T U V ,
+        U |= x \in T ->
+        U =-= V ->
+        V |= x \in T.
+    
+    intros x T U V h.
+    generalize dependent V.
+    induction h; try (unfold context_equivalence ; eauto; fail).
+
+    intros. eapply tyVar; eauto. rewrite <- H0; auto.
+    intros. eapply tyAbs; eauto.
+    assert (update i T Gamma =-= update i T V); eauto.
+    eapply update_inc. auto.
+    
+    intros. eapply tyLet. eapply IHh1. eapply update_inc. auto.
+    eapply IHh2; eauto.
+
+    intros. Print has_type. eapply tySCase; [eapply IHh1 | eapply IHh2 | eapply IHh3].
+    eapply update_inc; eauto.
+    eapply update_inc; eauto.
+    auto.
+
+    intros. eapply tyLCase; eauto. eapply IHh2.
+    repeat eapply update_inc; auto.
+Qed.
+
+Lemma non_occurs_free_ctx_add:
+forall x i T U G,
+    G |= x \in T ->
+    ~occurs_free i x ->
+    update i U G |= x \in T.
+
+intro x; induction x.
+
+intros. eapply tyVar. cbn.
+inversion H; subst. destruct (eq_id_dec i i0); subst; eauto.
+destruct (H0 (occurs_free_var _)).
+
+intros. inversion H; subst. 
+destruct (occurs_dec i0 x); destruct (eq_id_dec i0 i); subst;
+eapply tyAbs. eapply ctx_swap. eauto. eapply symm_ctxeq. eapply update_shadow.
+apply refl_ctxeq. assert (occurs_free i0 (tabs i t x)); eauto. destruct (H0 H1).
+eapply ctx_swap. eauto. eapply symm_ctxeq. eapply update_shadow.
+apply refl_ctxeq. eapply ctx_swap. eapply (IHx _ _ _ _ H6 n).
+eapply update_permute; eauto. apply refl_ctxeq.
+(* Tedious. I have to make small lemma into hint base and ..*)
+intros. inversion H; inver
+
+
+

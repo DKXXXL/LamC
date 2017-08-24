@@ -966,7 +966,7 @@ Corollary soundness :
         eauto.
 Qed.
 
-
+End STLCEXTENDED.
         
 
 
